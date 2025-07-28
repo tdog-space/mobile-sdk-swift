@@ -46,6 +46,7 @@ jobs:
 
       - name: Compress XCFramework
         run: |
+          ls .
           zip -9 -r RustFramework.xcframework.zip ./RustFramework.xcframework
           echo "XCF_CHECKSUM=`swift package compute-checksum RustFramework.xcframework.zip`" >> $GITHUB_ENV
 
