@@ -65,3 +65,10 @@ jobs:
           git push
           git tag ${{ github.event.inputs.version }} -m "${{ github.event.inputs.version }}"
           git push --tags
+
+      - name: Create release and attach XCFramework binary artifact
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "RustFramework.xcframework.zip"
+          tag: ${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.version }}
