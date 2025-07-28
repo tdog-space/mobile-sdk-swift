@@ -1,0 +1,4 @@
+module mobile_sdk_rsFFI {
+    header "mobile_sdk_rsFFI.h"
+    export *
+}
