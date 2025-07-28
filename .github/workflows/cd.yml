@@ -1,0 +1,78 @@
+name: cd
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag in SemVer format"
+        required: true
+        type: string
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate main branch
+        if: github.ref_name != github.event.repository.default_branch
+        run: |
+          echo "Branch is not main"
+          exit 0
+      - name: Validate tag
+        run: |
+          echo "${{ github.event.inputs.version }}" | grep -P '^[0-9]+\.[0-9]+\.[0-9]+'
+
+  ios:
+    runs-on: macos-latest
+    needs: validation
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.MONOREPO_GH_APP_ID }}
+          private-key: ${{ secrets.MONOREPO_GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            mobile-sdk-swift
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      - run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+
+      - name: Compress XCFramework
+        run: |
+          zip -9 -r RustFramework.xcframework.zip RustFramework.xcframework
+          echo "XCF_CHECKSUM=`swift package compute-checksum RustFramework.xcframework.zip`" >> $GITHUB_ENV
+
+      - name: Update Swift Package definition
+        run: |
+          sed -i '' 's/binaryTarget.*/binaryTarget(name: "RustFramework", url: "https:\/\/github.com\/tdog-space\/mobile-sdk-swift\/releases\/download\/${{ github.event.inputs.version }}\/RustFramework.xcframework.zip", checksum: "${{ env.XCF_CHECKSUM }}"),/' Package.swift
+
+      # If this fails due to a new commit on the main branch, it's a feature not a bug!
+      # This way, there will be no confusion around what was included in the release.
+      - name: Push changes and tag
+        id: commit
+        run: |
+          git add Package.swift
+          git commit -m "Release ${{ github.event.inputs.version }}"
+          git push
+          git tag ${{ github.event.inputs.version }} -m "${{ github.event.inputs.version }}"
+          git push --tags
+
+      - name: Create release and attach XCFramework binary artifact
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "RustFramework.xcframework.zip"
+          tag: ${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.version }}
+
+      - name: Revert changes to Package.swift for local development
+        if: steps.commit.outcome == 'success'
+        run: |
+          git revert --no-edit HEAD
+          git push
