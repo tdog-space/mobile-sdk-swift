@@ -65,16 +65,3 @@ jobs:
           git push
           git tag ${{ github.event.inputs.version }} -m "${{ github.event.inputs.version }}"
           git push --tags
-
-      - name: Create release and attach XCFramework binary artifact
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "RustFramework.xcframework.zip"
-          tag: ${{ github.event.inputs.version }}
-          name: ${{ github.event.inputs.version }}
-
-      - name: Revert changes to Package.swift for local development
-        if: steps.commit.outcome == 'success'
-        run: |
-          git revert --no-edit HEAD
-          git push
