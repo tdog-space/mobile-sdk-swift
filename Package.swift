@@ -18,7 +18,7 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "RustFramework", url: "https://github.com/tdog-space/mobile-sdk-swift/releases/download/0.5.0/RustFramework.xcframework.zip", checksum: "8256cbca0c3a995af74fa26b97f7e69af0e5e144ee81cea9d5ce2d11a883fd5b"),
+        .binaryTarget(name: "RustFramework", url: "https://github.com/tdog-space/mobile-sdk-swift/releases/download/0.1.0/RustFramework.xcframework.zip", checksum: ""),
         .target(
             name: "MobileSdkRs",
             dependencies: [
